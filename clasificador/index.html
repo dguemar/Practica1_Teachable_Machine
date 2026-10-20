@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b1220">
+  <title>Clasificador de imágenes con IA</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
+  <script defer src="./app.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-content">
+      <a class="brand" href="#" aria-label="Clasificador de imágenes con IA, inicio">
+        <span class="brand-mark" aria-hidden="true">IA</span>
+        <span>Visión inteligente</span>
+      </a>
+      <span class="header-note">Clasificación de imágenes</span>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <section class="intro">
+      <p class="eyebrow">Daniel Guerrero Martín -- 2º DAM</p>
+      <h1>Clasificador de imágenes con IA</h1>
+      <p class="intro-copy">Detecta un mando de aire acondicionado o una pajarita usando tu cámara o una imagen de tu dispositivo.</p>
+    </section>
+
+    <section class="model-status card" aria-live="polite">
+      <span id="modelStatusIcon" class="status-icon is-loading" aria-hidden="true"></span>
+      <div>
+        <p id="modelStatusTitle" class="status-title">Cargando el modelo…</p>
+        <p id="modelStatusMessage" class="status-message">Estamos preparando el clasificador. Puede tardar unos segundos.</p>
+      </div>
+    </section>
+
+    <div class="tools-grid">
+      <section class="card tool-card" aria-labelledby="cameraTitle">
+        <div class="card-heading">
+          <div>
+            <p class="eyebrow">En tiempo real</p>
+            <h2 id="cameraTitle">Clasificar con la cámara</h2>
+          </div>
+          <span class="heading-icon" aria-hidden="true">◉</span>
+        </div>
+        <p class="section-copy">Activa la cámara y muestra el objeto frente a ella para obtener una predicción en directo.</p>
+
+        <div class="camera-frame">
+          <video id="cameraVideo" class="media-preview" autoplay muted playsinline aria-label="Vista previa de la cámara" hidden></video>
+          <div id="cameraPlaceholder" class="media-placeholder">
+            <span class="placeholder-icon" aria-hidden="true">◎</span>
+            <p>La vista de la cámara aparecerá aquí</p>
+          </div>
+        </div>
+
+        <div class="button-row">
+          <button id="startCameraButton" class="button button-primary" type="button" disabled>Iniciar cámara</button>
+          <button id="stopCameraButton" class="button button-secondary" type="button" disabled>Detener cámara</button>
+        </div>
+        <p id="cameraMessage" class="feedback-message" role="status"></p>
+
+        <div class="result-panel" aria-live="polite">
+          <div class="result-heading">
+            <span class="result-label">Resultado</span>
+            <span id="cameraConfidence" class="confidence-value">—</span>
+          </div>
+          <p id="cameraResult" class="result-class">Esperando una imagen</p>
+          <p id="cameraCustomMessage" class="result-description">Inicia la cámara para comenzar a clasificar.</p>
+          <div class="confidence-track" aria-hidden="true">
+            <span id="cameraConfidenceBar" class="confidence-fill"></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="card tool-card" aria-labelledby="uploadTitle">
+        <div class="card-heading">
+          <div>
+            <p class="eyebrow">Desde tu dispositivo</p>
+            <h2 id="uploadTitle">Clasificar una imagen</h2>
+          </div>
+          <span class="heading-icon upload-icon" aria-hidden="true">↑</span>
+        </div>
+        <p class="section-copy">Elige una imagen para analizarla con el mismo modelo de Teachable Machine.</p>
+
+        <label class="upload-area" for="imageInput">
+          <span class="upload-symbol" aria-hidden="true">＋</span>
+          <span class="upload-label">Selecciona una imagen</span>
+          <span class="upload-hint">Formatos de imagen habituales</span>
+          <input id="imageInput" type="file" accept="image/*">
+        </label>
+
+        <div class="image-frame">
+          <img id="imagePreview" class="media-preview" alt="Vista previa de la imagen seleccionada" hidden>
+          <div id="imagePlaceholder" class="media-placeholder">
+            <span class="placeholder-icon" aria-hidden="true">▧</span>
+            <p>La imagen seleccionada aparecerá aquí</p>
+          </div>
+        </div>
+        <button id="classifyImageButton" class="button button-primary button-full" type="button" disabled>Clasificar imagen</button>
+        <p id="imageMessage" class="feedback-message" role="status"></p>
+
+        <div class="result-panel" aria-live="polite">
+          <div class="result-heading">
+            <span class="result-label">Resultado</span>
+            <span id="imageConfidence" class="confidence-value">—</span>
+          </div>
+          <p id="imageResult" class="result-class">Esperando una imagen</p>
+          <p id="imageCustomMessage" class="result-description">Selecciona una imagen para comenzar.</p>
+          <div class="confidence-track" aria-hidden="true">
+            <span id="imageConfidenceBar" class="confidence-fill"></span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="card threshold-card" aria-labelledby="thresholdTitle">
+      <div class="threshold-copy">
+        <div>
+          <p class="eyebrow">Precisión de la predicción</p>
+          <h2 id="thresholdTitle">Umbral mínimo de confianza</h2>
+        </div>
+        <p>Las predicciones por debajo del umbral se mostrarán como no identificadas.</p>
+      </div>
+      <div class="threshold-control">
+        <label for="confidenceThreshold">Confianza mínima</label>
+        <div class="range-row">
+          <input id="confidenceThreshold" type="range" min="0" max="100" value="60">
+          <output id="thresholdValue" for="confidenceThreshold">60 %</output>
+        </div>
+      </div>
+    </section>
+
+    <section class="card history-card" aria-labelledby="historyTitle">
+      <div class="history-heading">
+        <div>
+          <p class="eyebrow">Tus resultados</p>
+          <h2 id="historyTitle">Historial de clasificaciones</h2>
+        </div>
+        <button id="clearHistoryButton" class="button button-quiet" type="button">Borrar historial</button>
+      </div>
+      <p id="historyMessage" class="feedback-message" role="status"></p>
+      <div class="history-table-wrap">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th scope="col">Fecha</th>
+              <th scope="col">Clase detectada</th>
+              <th scope="col">Confianza</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody">
+            <tr class="empty-history">
+              <td colspan="3">Todavía no hay clasificaciones guardadas.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <footer class="page-footer">Las imágenes se procesan en este navegador y no se suben a un servidor.</footer>
+  </main>
+</body>
+</html>
